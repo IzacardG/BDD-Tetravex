@@ -44,6 +44,16 @@ let emptyValuation () =
     Hashtbl.create 10
 ;;
 
+let printPair a b =
+  if b then print_string(a ^ "@t") else print_string(a ^ "@f")
+;;                      
+                          
+let printValuation valuation =
+  Hashtbl.iter printPair valuation
+;;
+
+
+  
 let rec eval valuation = function
     |True          -> true
     |False         -> false
@@ -119,7 +129,9 @@ let rec treeToString tree =
   |Node(x,l,r) -> "N(" ^ x ^ "," ^ (treeToString l) ^ "," ^ (treeToString r) ^ ")"
 ;;
 
-
+ 
 
 let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s")));;
 
+
+let evalBDD valuation = 
