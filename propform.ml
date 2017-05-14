@@ -72,15 +72,17 @@ let rec formuleToString = function
     | Equi (e1, e2)  ->  "(" ^ (formuleToString e1) ^ " <-> " ^ (formuleToString e2) ^ ")"
 ;;
 
-let rec setVar = function
+let setVar formule =
+    let rec aux = function
     | True ->  S.empty
     | False -> S.empty
     | Var s -> S.singleton s
-    | Not e1 -> setVar e1
-    | And (e1, e2) -> S.union (setVar e1) (setVar e2)
-    | Or (e1, e2) -> S.union (setVar e1) (setVar e2)
-    | Imp (e1, e2) -> S.union (setVar e1) (setVar e2)
-    | Equi (e1, e2) -> S.union (setVar e1) (setVar e2)
+    | Not e1 -> aux e1
+    | And (e1, e2) -> S.union (aux e1) (aux e2)
+    | Or (e1, e2) -> S.union (aux e1) (aux e2)
+    | Imp (e1, e2) -> S.union (aux e1) (aux e2)
+    | Equi (e1, e2) -> S.union (aux e1) (aux e2)
+    in S.elements (aux formule)
 ;;
 
 let buildTree formule =
@@ -95,7 +97,7 @@ let buildTree formule =
                 Node(t, a, b)
             end
     in
-    aux (emptyValuation ()) (S.elements (setVar formule))
+    aux (emptyValuation ()) (setVar formule)
 ;;
 
 let isLeaf = function
@@ -195,7 +197,7 @@ let rec estSatisfiable = function
 
 let rec estValide = function
     | DLeaf(b) -> b
-    | DNode(_, _, a, b) -> estSatisfiable a && estSatisfiable b
+    | DNode(_, _, a, b) -> estValide a && estValide b
 ;;
 
 let createBdd formule =
