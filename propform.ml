@@ -18,7 +18,7 @@ type 'a formula =
     |Imp of 'a formula * 'a formula
     |Equi of 'a formula * 'a formula
 
-(* Gauche : faux, droit vrai *)
+(* Gauche : true, droite : false *)
 type bdd =
     |Leaf of bool
     |Node of string * bdd * bdd
@@ -59,11 +59,11 @@ let rec formuleToString = function
     | True        -> "true"
     | False       -> "false"
     | Var e       -> e
-    | Not e       -> "(! " ^ (to_string e) ^ ")"
-    | And (e1, e2)   -> "(" ^ (to_string e1) ^ " && " ^ (to_string e2) ^ ")"
-    | Or (e1,  e2)    -> "(" ^ (to_string e1) ^ " || " ^ (to_string e2) ^ ")"
-    | Imp (e1, e2)  -> "(" ^ (to_string e1) ^ " -> " ^ (to_string e2) ^ ")"
-    | Equi (e1, e2)  ->  "(" ^ (to_string e1) ^ " <-> " ^ (to_string e2) ^ ")"
+    | Not e       -> "(! " ^ (formuleToString e) ^ ")"
+    | And (e1, e2)   -> "(" ^ (formuleToString e1) ^ " && " ^ (formuleToString e2) ^ ")"
+    | Or (e1,  e2)    -> "(" ^ (formuleToString e1) ^ " || " ^ (formuleToString e2) ^ ")"
+    | Imp (e1, e2)  -> "(" ^ (formuleToString e1) ^ " -> " ^ (formuleToString e2) ^ ")"
+    | Equi (e1, e2)  ->  "(" ^ (formuleToString e1) ^ " <-> " ^ (formuleToString e2) ^ ")"
 ;;
 
 let rec setVar = function
@@ -82,9 +82,9 @@ let buildTree formule =
         | [] -> Leaf(eval valuation formule)
         | t::q ->
             begin
-                setValue valuation t false;
-                let a = aux valuation q in
                 setValue valuation t true;
+                let a = aux valuation q in
+                setValue valuation t false;
                 let b = aux valuation q in
                 Node(t, a, b)
             end
@@ -116,11 +116,10 @@ let rec treeToString tree =
   match tree with
   |Leaf(true) -> "L(T)"
   |Leaf(false) -> "L(F)"
-  |Node(x,l,r) -> "N(" ^ x ^ ", " ^ (treeToString l) ^ ", " ^ (treeToString r) ^ ")"
+  |Node(x,l,r) -> "N(" ^ x ^ "," ^ (treeToString l) ^ "," ^ (treeToString r) ^ ")"
 ;;
 
-(* Tests *)
+
 
 let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s")));;
-
 
