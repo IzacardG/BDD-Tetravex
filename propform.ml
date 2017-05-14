@@ -31,7 +31,7 @@ type bdt =
 
 let getValue valuation v =
     if (not (Hashtbl.mem valuation v)) then
-        failwith "Variable not assigned"
+        false
     else
         Hashtbl.find valuation v
 ;;
@@ -91,5 +91,27 @@ let buildTree formule =
     in
     aux (emptyValuation ()) (S.elements (setVar formule))
 ;;
+
+let isLeaf = function
+    | Leaf(_) -> true
+    | _ -> false
+;;
+
+let rec reduceTree tree =
+    match tree with
+    | Leaf(_) -> tree
+    | Node(_, Leaf(b1), Leaf(b2)) -> if b1 == b2 then Leaf(b1) else tree
+    | Node(v, t1, t2) ->
+        begin
+            let a = reduceTree t1 in
+            let b = reduceTree t2 in
+            if (isLeaf a && isLeaf b) then
+                reduceTree (Node(v, a, b))
+            else
+                Node(v, a, b)
+        end
+;;
+
+(* Tests *)
 
 let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s")));
