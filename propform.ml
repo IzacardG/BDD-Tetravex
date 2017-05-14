@@ -55,7 +55,7 @@ let rec eval valuation = function
     |Equi (e1, e2) -> (eval valuation (Imp(e1,e2))) && (eval valuation (Imp(e2, e1)))
 ;;
 
-let rec to_string = function
+let rec formuleToString = function
     | True        -> "true"
     | False       -> "false"
     | Var e       -> e
@@ -110,6 +110,10 @@ let rec reduceTree tree =
             else
                 Node(v, a, b)
         end
+;;
+
+let treeToString tree = 
+    "a"
 ;;
 
 (* Tests *)
