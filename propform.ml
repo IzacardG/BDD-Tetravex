@@ -150,7 +150,7 @@ let reduceTreeTobdd tree =
     norm tree
 ;;
 
-let printBdd (bdd : bdd) =
+let printBdd bdd =
     let getValue = function
         | DLeaf(b) -> if b then "@t" else "@f"
         | DNode(id, _, _, _) -> string_of_int id
@@ -174,18 +174,30 @@ let printBdd (bdd : bdd) =
     aux bdd set
 ;;
 
-(*
-let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s"))) in
-let big_tree = buildTree formule in
-printBdd(reduceTreeTobdd big_tree);
-*)
+let rec evaluateBdd valuation = function
+    | DLeaf(b) -> b
+    | DNode(_, var, t, f) ->
+        if getValue valuation var then
+            evaluateBdd valuation t
+        else
+            evaluateBdd valuation f
+;;
 
-let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s"))) in
-let reduced_tree = reduceTree (buildTree formule) in
-printBdd(reduceTreeTobdd reduced_tree);
+let rec noBdd = function
+    | DLeaf(b) -> DLeaf(not b)
+    | DNode(id, var, a, b) -> DNode(id, var, noBdd a, noBdd b)
+;;
 
-(*
-let big_tree = buildTree formule;
-let big_bdd = reduceTreeTobdd big_tree;
-let reduced_bdd = reduceTreeTobdd reduced_tree;
-*)
+let rec estSatisfiable = function
+    | DLeaf(b) -> b
+    | DNode(_, _, a, b) -> estSatisfiable a || estSatisfiable b
+;;
+
+let rec estValide = function
+    | DLeaf(b) -> b
+    | DNode(_, _, a, b) -> estSatisfiable a && estSatisfiable b
+;;
+
+let createBdd formule =
+    reduceTreeTobdd (reduceTree (buildTree formule))
+;;
