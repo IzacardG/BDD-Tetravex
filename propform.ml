@@ -1,10 +1,10 @@
 (* Foncteurs *)
 
 module S = Set.Make( 
-  struct
-    let compare = Pervasives.compare
-    type t = string
-  end)
+    struct
+        type t = string
+        let compare = Pervasives.compare
+    end)
 
 (* Types *)
 
@@ -21,7 +21,7 @@ type 'a formula =
 (* Gauche : true, droite : false *)
 type bdd =
     |Leaf of bool
-    |Node of string * bdd * bdd
+    |Node of int * string * bdd * bdd
 
 type bdt =
     |Leaf of bool
@@ -118,13 +118,39 @@ let treeToString tree =
 
 let reduceTreeToBDD tree =
     let t = Hashtbl.create 10 in
-    let rec aux x =
-        let s = treeToString x in
-        if Hashtbl.mem s then
-            Hashtbl.find s
-        else
-            Hashtbl.add 
+    let i = ref 0 in
+    let vrai : bdd = Leaf(true) in
+    let faux : bdd = Leaf(false) in
+    let rec norm x : bdd =
+        match x with
+        | Leaf(b) -> if b then vrai else faux
+        | Node(var, a, b) ->
+            begin
+                ignore(print_int (Hashtbl.length t));
+                ignore(print_int (List.length (Hashtbl.find_all t "a")));
+                let n : bdd = Node(!i, var, norm a, norm b) in
+                let s = "a" in
+                if Hashtbl.mem t s then
+                    Hashtbl.find t s
+                else
+                    begin
+                        Hashtbl.add t s n;
+                        i := !i + 1;
+                        n
+                    end
+            end
+    in
+    norm tree
+;;
 
 (* Tests *)
 
-let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s")));
+let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s"))) in
+let big_tree = buildTree formule in
+reduceTreeToBDD big_tree;
+
+(*
+let big_tree = buildTree formule;
+let big_bdd = reduceTreeToBDD big_tree;
+let reduced_bdd = reduceTreeToBDD reduced_tree;
+*)
