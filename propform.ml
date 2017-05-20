@@ -156,18 +156,34 @@ module BDT =
 module BDD =
     struct
 
-        let createFromBDT tree =
+        let simpleFromBDT tree =
+            let rec norm x =
+                match x with
+                | Leaf(b) -> DLeaf(b)
+                | Node(var, a, b) -> DNode(0, var, norm a, norm b) 
+            in
+            norm tree
+        ;;
+
+        let rec toString bdd = 
+          match bdd with
+          |DLeaf(true) -> "L(T)"
+          |DLeaf(false) -> "L(F)"
+          |DNode(_, x,l,r) -> "N(" ^ x ^ "," ^ (toString l) ^ "," ^ (toString r) ^ ")"
+        ;;
+
+        let optimize bdd =
             let t = Hashtbl.create 10 in
             let i = ref 0 in
             let vrai = DLeaf(true) in
             let faux = DLeaf(false) in
             let rec norm x =
                 match x with
-                | Leaf(b) -> if b then vrai else faux
-                | Node(var, a, b) ->
+                | DLeaf(_) -> x
+                | DNode(_, var, a, b) ->
                     begin
                         let n = DNode(!i, var, norm a, norm b) in
-                        let s = BDT.toString x in
+                        let s = toString x in
                         if Hashtbl.mem t s then
                             Hashtbl.find t s
                         else
@@ -178,8 +194,10 @@ module BDD =
                             end
                     end
             in
-            norm tree
+            norm bdd
         ;;
+
+        let createFromBDT tree = optimize (simpleFromBDT tree);;
 
         let print bdd =
             let getValue = function
@@ -219,10 +237,35 @@ module BDD =
             | DNode(id, var, a, b) -> DNode(id, var, no a, no b)
         ;;
 
-        let rec isSatisfiable = function
-            | DLeaf(b) -> b
-            | DNode(_, _, a, b) -> isSatisfiable a || isSatisfiable b
+        (* Suppose que les BDD sont triés de la même façon au niveau des variables *)
+        let rec combine f t1 t2 =
+            match (t1, t2) with
+            | (DLeaf(b1), DLeaf(b2)) -> DLeaf(f b1 b2)
+            | (DLeaf(b1), DNode(_, var, a, b)) -> DNode(0, var, combine f t1 a, combine f t1 b)
+            | (DNode(_, var, a, b), DLeaf(b2)) -> DNode(0, var, combine f a t2, combine f b t2)
+            | (DNode(_, var1, a1, b1), DNode(_, var2, a2, b2)) ->
+                if var1 = var2 then
+                    DNode(0, var1, combine f a1 a2, combine f b1 b2)
+                else if var1 < var2 then
+                    DNode(0, var1, combine f a1 t2, combine f b1 t2)
+                else
+                    DNode(0, var2, combine f t1 a2, combine f t1 b2)
         ;;
+
+        let rec isCombined f = function
+            | DLeaf(b) -> b
+            | DNode(_, _, a, b) -> f (isCombined f a) (isCombined f b)
+        ;;
+        
+        let andBDD = combine (fun x y -> x && y);;
+        let orBDD = combine (fun x y -> x || y);;
+
+        let imp a b = orBDD (no a) b;;
+        let equi a b = andBDD (imp a b) (imp b a);;
+            
+
+        let isSatisfiable = isCombined (fun x y -> x || y);;
+        let isValid = isCombined (fun x y -> x && y);;
 
         let rec satisfact = function
             | DLeaf(b) -> (b, [])
@@ -231,10 +274,15 @@ module BDD =
             else let (b2, l2) = satisfact b in (b2, (var, false)::l2)
         ;;
 
-
-        let rec isValid = function
-            | DLeaf(b) -> b
-            | DNode(_, _, a, b) -> isValid a && isValid b
+        let rec createBis = function
+            | True        -> DLeaf(true)
+            | False       -> DLeaf(false)
+            | Var (e)      -> DNode(0, e, DLeaf(true), DLeaf(false))
+            | Not(e)       -> no (createBis e)
+            | And (e1, e2)   -> andBDD (createBis e1) (createBis e2)
+            | Or (e1,  e2)    -> orBDD (createBis e1) (createBis e2)
+            | Imp (e1, e2)  -> imp (createBis e1) (createBis e2)
+            | Equi (e1, e2)  -> equi (createBis e1) (createBis e2)
         ;;
 
         let create formule =
@@ -304,13 +352,22 @@ module Tetravex =
                     in
                     aux 1 1
 
+                method aucunAutre (dom: domino) a b =
+                    let rec aux = function
+                    | [] -> True
+                    | t::q -> if t#id = dom#id then aux q
+                        else
+                            And(Not(self#formulePlacement t a b), aux q)
+                    in
+                    aux dominos
 
                 method placerPotentiellement dom a b =
                     let f1 = if a + 1 <= n then self#impliqueDroite a b dom dominos else True in
                     let f2 = if b + 1 <= p then self#impliqueBas a b dom dominos else True in
                     let v = self#formulePlacement dom a b in
                     let unique = self#placerUnique dom a b in
-                    Imp(v, And(And(f1, f2), unique))
+                    let seul = self#aucunAutre dom a b in
+                    Imp(v, And(And(And(f1, f2), unique), seul))
 
                 method placerPotentiellementPartout dom =
                     let rec aux a b =
@@ -346,9 +403,9 @@ module Tetravex =
                     let f1 = self#toutPlacer l in
                     let f2 = self#existence in
                     let f = And(f1, f2) in
-                    let bdd = BDD.create f in
-                    BDD.satisfact bdd
-
+                    let bdd = BDD.createBis f in
+                    let (b, l) = BDD.satisfact bdd in
+                    if b then List.map (fun (x, _) -> x) (List.filter (fun (_, x) -> x) l) else []
             end
         ;;
 
@@ -360,6 +417,11 @@ let d1 = new Tetravex.domino 5 4 8 9 1 in
 let d2 = new Tetravex.domino 1 9 9 5 2 in
 let d3 = new Tetravex.domino 4 1 7 6 3 in
 let d4 = new Tetravex.domino 9 6 6 6 4 in
+let d5 = new Tetravex.domino 9 8 5 1 5 in
+let d6 = new Tetravex.domino 8 4 6 3 6 in
+let d7 = new Tetravex.domino 1 0 1 9 7 in
+let d8 = new Tetravex.domino 6 4 9 0 8 in
+let d9 = new Tetravex.domino 4 2 0 8 9 in
 let l = [d1;d2;d3;d4] in
 let t = new Tetravex.tetravex 2 2 l in
 t#solve ();;
