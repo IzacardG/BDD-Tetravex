@@ -103,18 +103,25 @@ module BDT =
     struct
 
         let build formule =
-            let rec aux valuation = function
-                | [] -> Leaf(Formule.eval valuation formule)
+            let i = ref 0 in
+            let rec aux k valuation = function
+                | [] -> k (Leaf(Formule.eval valuation formule))
                 | t::q ->
                     begin
+                        (* print_string ((string_of_int !i) ^ ","); *)
+                        i := !i + 1;
+                        let k0 a b =
+                            k (Node(t, a, b))
+                        in
+                        let k1 a =
+                            Valuation.setValue valuation t false;
+                            aux (k0 a) valuation q
+                        in
                         Valuation.setValue valuation t true;
-                        let a = aux valuation q in
-                        Valuation.setValue valuation t false;
-                        let b = aux valuation q in
-                        Node(t, a, b)
+                        aux k1 valuation q
                     end
             in
-            aux (Valuation.empty ()) (Formule.setVar formule)
+            aux (fun x -> x) (Valuation.empty ()) (Formule.setVar formule)
         ;;
 
         let isLeaf = function
@@ -217,6 +224,14 @@ module BDD =
             | DNode(_, _, a, b) -> isSatisfiable a || isSatisfiable b
         ;;
 
+        let rec satisfact = function
+            | DLeaf(b) -> (b, [])
+            | DNode(_, var, a, b) -> let (b1, l1) = satisfact a in
+            if b1 then (true, (var, true)::l1)
+            else let (b2, l2) = satisfact b in (b2, (var, false)::l2)
+        ;;
+
+
         let rec isValid = function
             | DLeaf(b) -> b
             | DNode(_, _, a, b) -> isValid a && isValid b
@@ -228,3 +243,123 @@ module BDD =
 
     end
 ;;
+
+module Tetravex =
+    struct
+
+        class domino (h: int) (b: int) (g: int) (d: int) (i: int) =
+            object
+                method id = i
+                method haut = h
+                method bas = b
+                method gauche = g
+                method droite = d
+            end
+        ;;
+
+        class tetravex (n: int) (p: int) (l: domino list) =
+            object (self)
+
+                val n = n
+                val p = p
+                val dominos = l
+
+                method formulePlacement dom a b =
+                    Var((string_of_int a) ^ "," ^ (string_of_int b) ^ ":" ^ (string_of_int dom#id))
+                
+                method impliqueDroite a b (dom: domino) (l: domino list) =
+                    match l with
+                    | [] -> False
+                    | t::q ->
+                        if t#id = dom#id then
+                            self#impliqueDroite a b dom q
+                        else if (t#gauche = dom#droite) then
+                            let f = self#formulePlacement t (a + 1) b in
+                            Or(f, self#impliqueDroite a b dom q)
+                        else
+                            self#impliqueDroite a b dom q
+
+                method impliqueBas a b (dom: domino) (l: domino list) =
+                    match l with
+                    | [] -> False
+                    | t::q ->
+                        if t#id = dom#id then
+                            self#impliqueBas a b dom q
+                        else if (t#haut = dom#bas) then
+                            let f = self#formulePlacement t a (b + 1) in
+                            Or(f, self#impliqueBas a b dom q)
+                        else
+                            self#impliqueBas a b dom q
+
+                method placerUnique dom a b =
+                    let rec aux u v =
+                        if u > n then
+                            True
+                        else if v > p then
+                            aux (u + 1) 1
+                        else if (u = a && v = b) then
+                            aux u (v + 1)
+                        else
+                            And(Not(self#formulePlacement dom u v), aux u (v + 1))
+                    in
+                    aux 1 1
+
+
+                method placerPotentiellement dom a b =
+                    let f1 = if a + 1 <= n then self#impliqueDroite a b dom dominos else True in
+                    let f2 = if b + 1 <= p then self#impliqueBas a b dom dominos else True in
+                    let v = self#formulePlacement dom a b in
+                    let unique = self#placerUnique dom a b in
+                    Imp(v, And(And(f1, f2), unique))
+
+                method placerPotentiellementPartout dom =
+                    let rec aux a b =
+                        if a > n then
+                            True
+                        else if b > p then
+                            aux (a + 1) 1
+                        else
+                            And(self#placerPotentiellement dom a b, aux a (b + 1))
+                    in
+                    aux 1 1
+
+                method existence =
+                    let rec exist a b = function
+                        | [] -> False
+                        | t::q -> Or(self#formulePlacement t a b, exist a b q)
+                    in
+                    let rec aux a b =
+                        if a > n then
+                            True
+                        else if b > p then
+                            aux (a + 1) 1
+                        else
+                            And(exist a b dominos, aux a (b +1))
+                    in
+                    aux 1 1
+
+                method toutPlacer = function
+                    | [] -> True
+                    | t::q -> And(self#placerPotentiellementPartout t, self#toutPlacer q)
+
+                method solve () =
+                    let f1 = self#toutPlacer l in
+                    let f2 = self#existence in
+                    let f = And(f1, f2) in
+                    let bdd = BDD.create f in
+                    BDD.satisfact bdd
+
+            end
+        ;;
+
+    end
+;;
+
+let d0 = new Tetravex.domino 1 1 1 1 0 in
+let d1 = new Tetravex.domino 5 4 8 9 1 in
+let d2 = new Tetravex.domino 1 9 9 5 2 in
+let d3 = new Tetravex.domino 4 1 7 6 3 in
+let d4 = new Tetravex.domino 9 6 6 6 4 in
+let l = [d1;d2;d3;d4] in
+let t = new Tetravex.tetravex 2 2 l in
+t#solve ();;
