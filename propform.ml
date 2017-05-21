@@ -1,10 +1,16 @@
 (* Foncteurs *)
 
 module S = Set.Make( 
-  struct
-    let compare = Pervasives.compare
-    type t = string
-  end)
+    struct
+        type t = string
+        let compare = Pervasives.compare
+    end)
+
+module IntSet = Set.Make( 
+    struct
+        type t = int
+        let compare = Pervasives.compare
+    end)
 
 (* Types *)
 
@@ -20,8 +26,8 @@ type 'a formula =
 
 (* Gauche : true, droite : false *)
 type bdd =
-    |Leaf of bool
-    |Node of string * bdd * bdd
+    |DLeaf of bool
+    |DNode of int * string * bdd * bdd
 
 type bdt =
     |Leaf of bool
@@ -129,9 +135,69 @@ let rec treeToString tree =
   |Node(x,l,r) -> "N(" ^ x ^ "," ^ (treeToString l) ^ "," ^ (treeToString r) ^ ")"
 ;;
 
- 
 
-let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s")));;
+let reduceTreeTobdd tree =
+    let t = Hashtbl.create 10 in
+    let i = ref 0 in
+    let vrai = DLeaf(true) in
+    let faux = DLeaf(false) in
+    let rec norm x : bdd =
+        match x with
+        | Leaf(b) -> if b then vrai else faux
+        | Node(var, a, b) ->
+            begin
+                let n = DNode(!i, var, norm a, norm b) in
+                let s = treeToString x in
+                if Hashtbl.mem t s then
+                    Hashtbl.find t s
+                else
+                    begin
+                        Hashtbl.add t s n;
+                        i := !i + 1;
+                        n
+                    end
+            end
+    in
+    norm tree
+;;
 
+let printBdd (bdd : bdd) =
+    let getValue = function
+        | DLeaf(b) -> if b then "@t" else "@f"
+        | DNode(id, _, _, _) -> string_of_int id
+    in
+    let set = ref IntSet.empty in
+    let rec aux (node : bdd) set =
+        match node with
+        | DLeaf(_) -> ()
+        | DNode(id, var, a, b) ->
+            begin
+                if not (IntSet.mem id (!set)) then
+                    begin
+                        set := IntSet.add id (!set);
+                        let s = (string_of_int id) ^ " " ^ var ^ " " ^ (getValue a) ^ " " ^ (getValue b) in
+                        print_string (s ^ "\n");
+                        aux a set;
+                        aux b set;
+                    end
+            end
+    in
+    aux bdd set
+;;
 
-let evalBDD valuation = 
+(*
+let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s"))) in
+let big_tree = buildTree formule in
+printBdd(reduceTreeTobdd big_tree);
+*)
+
+let formule = Or(Imp(Var("p"), Var("q")), And(Var("r"), Var("s"))) in
+let reduced_tree = reduceTree (buildTree formule) in
+printBdd(reduceTreeTobdd reduced_tree);
+
+(*
+let big_tree = buildTree formule;
+let big_bdd = reduceTreeTobdd big_tree;
+let reduced_bdd = reduceTreeTobdd reduced_tree;
+*)
+
