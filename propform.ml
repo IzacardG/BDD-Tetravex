@@ -259,10 +259,8 @@ module BDD =
         
         let andBDD = combine (fun x y -> x && y);;
         let orBDD = combine (fun x y -> x || y);;
-
-        let imp a b = orBDD (no a) b;;
-        let equi a b = andBDD (imp a b) (imp b a);;
-            
+        let imp = combine (fun x y -> (not x) || y);;
+        let equi = combine (fun x y -> (x && y) || ((not x) && (not y)));;
 
         let isSatisfiable = isCombined (fun x y -> x || y);;
         let isValid = isCombined (fun x y -> x && y);;
