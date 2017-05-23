@@ -13,15 +13,17 @@ type 'a formula =
 
 (* Gauche : true, droite : false *)
 
-type bdt =
+type 'a bdt =
     |Leaf of bool
-    |Node of string * bdt * bdt
+    |Node of 'a * 'a bdt * 'a bdt
 ;;
 
-type bdd =
+type 'a bdd =
     |DLeaf of bool
-    |DNode of int * string * bdd * bdd
+    |DNode of int * 'a * 'a bdd * 'a bdd
 ;;
+
+type 'a valuation = ('a, bool) Hashtbl.t;;
 
 (* Modules utiles *)
 
@@ -41,18 +43,18 @@ module IntSet = Set.Make(
 
 module Valuation =
     struct
-        let getValue valuation v =
+        let getValue (valuation: 'a valuation) v =
             if (not (Hashtbl.mem valuation v)) then
                 false
             else
                 Hashtbl.find valuation v
         ;;
 
-        let setValue valuation v x =
+        let setValue (valuation: 'a valuation) v x =
             Hashtbl.add valuation v x
         ;;
 
-        let empty () =
+        let empty () : 'a valuation =
             Hashtbl.create 10
         ;;
     end
@@ -85,7 +87,7 @@ module Formule =
             in S.elements (aux formule)
         ;;
 
-        let rec eval valuation = function
+        let rec eval (valuation: 'a valuation) = function
             |True          -> true
             |False         -> false
             |Var v         -> Valuation.getValue valuation v
@@ -175,8 +177,6 @@ module BDD =
         let optimize bdd =
             let t = Hashtbl.create 10 in
             let i = ref 0 in
-            let vrai = DLeaf(true) in
-            let faux = DLeaf(false) in
             let rec norm x =
                 match x with
                 | DLeaf(_) -> x
@@ -205,7 +205,7 @@ module BDD =
                 | DNode(id, _, _, _) -> string_of_int id
             in
             let set = ref IntSet.empty in
-            let rec aux (node : bdd) set =
+            let rec aux node set =
                 match node with
                 | DLeaf(_) -> ()
                 | DNode(id, var, a, b) ->
@@ -237,6 +237,38 @@ module BDD =
             | DNode(id, var, a, b) -> DNode(id, var, no a, no b)
         ;;
 
+        let optimized_combine f t1 t2 =
+            let t = Hashtbl.create 10 in
+            let i = ref 0 in
+            let rec aux f t1 t2 =
+                let n =
+                match (t1, t2) with
+                | (DLeaf(b1), DLeaf(b2)) -> DLeaf(f b1 b2)
+                | (DLeaf(b1), DNode(_, var, a, b)) -> DNode(0, var, aux f t1 a, aux f t1 b)
+                | (DNode(_, var, a, b), DLeaf(b2)) -> DNode(0, var, aux f a t2, aux f b t2)
+                | (DNode(_, var1, a1, b1), DNode(_, var2, a2, b2)) ->
+                    if var1 = var2 then
+                        DNode(0, var1, aux f a1 a2, aux f b1 b2)
+                    else if var1 < var2 then
+                        DNode(0, var1, aux f a1 t2, aux f b1 t2)
+                    else
+                        DNode(0, var2, aux f t1 a2, aux f t1 b2)
+                in
+                begin
+                    let s = toString n in
+                    if Hashtbl.mem t s then
+                        Hashtbl.find t s
+                    else
+                        begin
+                            Hashtbl.add t s n;
+                            i := !i + 1;
+                            n
+                        end
+                end
+            in
+            aux f t1 t2
+        ;;
+
         (* Suppose que les BDD sont triés de la même façon au niveau des variables *)
         let rec combine f t1 t2 =
             match (t1, t2) with
@@ -262,8 +294,8 @@ module BDD =
         let imp = combine (fun x y -> (not x) || y);;
         let equi = combine (fun x y -> (x && y) || ((not x) && (not y)));;
 
-        let isSatisfiable = isCombined (fun x y -> x || y);;
-        let isValid = isCombined (fun x y -> x && y);;
+        let isSatisfiable a = isCombined (fun x y -> x || y) a;;
+        let isValid a = isCombined (fun x y -> x && y) a;;
 
         let rec satisfact = function
             | DLeaf(b) -> (b, [])
@@ -422,4 +454,4 @@ let d8 = new Tetravex.domino 6 4 9 0 8 in
 let d9 = new Tetravex.domino 4 2 0 8 9 in
 let l = [d1;d2;d3;d4] in
 let t = new Tetravex.tetravex 2 2 l in
-t#solve ();;
+List.iter (fun x -> print_string (x ^ ", ")) (t#solve ());;
