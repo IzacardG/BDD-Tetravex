@@ -13,7 +13,7 @@ Valuation.setValue valuation "s" true;
 assert(BDD.evaluate valuation bdd);
 
 let formule = And(Var("x"), Not(Var("x"))) in
-assert(BDD.isValid (BDD.no (BDD.create formule)));
+assert(BDD.isValid (BDD.notBDD (BDD.create formule)));
 
 let formule = Imp(Var("a"), Var("a")) in
 assert(BDD.isValid (BDD.create formule));
@@ -24,4 +24,4 @@ BDD.print (BDD.create formule);
 
 print_string "\nGros BDD\n";
 let big_tree = BDT.build formule in
-BDD.print (BDD.createFromBDT big_tree);
+BDT.toString big_tree;

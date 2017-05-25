@@ -210,171 +210,160 @@ struct
   end
     
   module HPairBDD = Hashtbl.Make(H2) 
-    
-let memoised f =
-  let container = HPairBDD.create 2047 in
-  let rec help x y =
-    try HPairBDD.find container (x,y)
-    with Not_found ->
-      let res = f help x y in
-      HPairBDD.add container (x,y) res;
-    res
-  in
-  help
-    
-let notContainer =  Hashtbl.create 5000
-  
-let rec notBDD bdd =
-  match bdd with
-  | False -> True
-  | True -> False
-  | ANode(id, v, g, d) ->
-    try
-      Hashtbl.find notContainer id
-    with Not_found ->
-      let newNode = makeNode v (notBDD g)  (notBDD d)
-      in Hashtbl.add notContainer id newNode;
-      newNode
+
+    let notContainer =  Hashtbl.create 5000
+      
+    let rec notBDD bdd =
+      match bdd with
+      | False -> True
+      | True -> False
+      | ANode(id, v, g, d) ->
+        try
+          Hashtbl.find notContainer id
+        with Not_found ->
+          let newNode = makeNode v (notBDD g)  (notBDD d)
+          in Hashtbl.add notContainer id newNode;
+          newNode
+            
+    let andContainer = HPairBDD.create 5000
+      
+    let rec andBDD bdd1 bdd2 =
+      match bdd1, bdd2 with
+      |True, _ -> bdd2
+      |False, _ -> False
+      |_, True -> bdd1
+      |_, False -> False
+      |ANode(id1, v1, g1, d1), ANode(id2, v2, g2, d2) ->
+         if id1 = id2
+         then
+           bdd1
+         else
+           let key = if id1 < id2 then (id1, id2) else (id2, id1)
+           in try HPairBDD.find andContainer key
+               with Not_found ->
+                 let newNode =
+                   if v1 = v2
+                   then
+                     makeNode v1 (andBDD g1 g2) (andBDD d1 d2)
+                   else if v1 < v2
+                   then
+                     makeNode v1 (andBDD g1 bdd2) (andBDD d1 bdd2)
+                   else
+                     makeNode v2 (andBDD bdd1 g2) (andBDD bdd1 d2)
+                 in HPairBDD.add andContainer key newNode;
+                 newNode
+
+    let orContainer = HPairBDD.create 5000
+      
+    let rec orBDD bdd1 bdd2 =
+      match bdd1, bdd2 with
+      |True, _ -> True
+      |False, _ -> bdd2
+      |_, True -> True
+      |_, False -> bdd1
+      |ANode(id1, v1, g1, d1), ANode(id2, v2, g2, d2) ->
+         if id1 = id2
+         then
+           bdd1
+         else
+           let key = if id1 < id2 then (id1, id2) else (id2, id1)
+           in try HPairBDD.find orContainer key 
+               with Not_found ->
+                 let newNode =
+                   if v1 = v2
+                   then
+                     makeNode v1 (orBDD g1 g2) (orBDD d1 d2)
+                   else if v1 < v2
+                   then
+                     makeNode v1 (orBDD g1 bdd2) (orBDD d1 bdd2)
+                   else
+                     makeNode v2 (orBDD bdd1 g2) (orBDD bdd1 d2)
+                 in HPairBDD.add orContainer (id1, id2) newNode;
+                 newNode
+                   
+    let implBDD bdd1 bdd2 =
+      orBDD (notBDD bdd1) bdd2
         
-let andContainer = HPairBDD.create 5000
-  
-let rec andBDD bdd1 bdd2 =
-  match bdd1, bdd2 with
-  |True, _ -> bdd2
-  |False, _ -> False
-  |_, True -> bdd1
-  |_, False -> False
-  |ANode(id1, v1, g1, d1), ANode(id2, v2, g2, d2) ->
-     if id1 = id2
-     then
-       bdd1
-     else
-       let key = if id1 < id2 then (id1, id2) else (id2, id1)
-       in try HPairBDD.find andContainer key
-           with Not_found ->
-             let newNode =
-               if v1 = v2
-               then
-                 makeNode v1 (andBDD g1 g2) (andBDD d1 d2)
-               else if v1 < v2
-               then
-                 makeNode v1 (andBDD g1 bdd2) (andBDD d1 bdd2)
-               else
-                 makeNode v2 (andBDD bdd1 g2) (andBDD bdd1 d2)
-             in HPairBDD.add andContainer key newNode;
-             newNode
-
-let orContainer = HPairBDD.create 5000
-  
-let rec orBDD bdd1 bdd2 =
-  match bdd1, bdd2 with
-  |True, _ -> True
-  |False, _ -> bdd2
-  |_, True -> True
-  |_, False -> bdd1
-  |ANode(id1, v1, g1, d1), ANode(id2, v2, g2, d2) ->
-     if id1 = id2
-     then
-       bdd1
-     else
-       let key = if id1 < id2 then (id1, id2) else (id2, id1)
-       in try HPairBDD.find orContainer key 
-           with Not_found ->
-             let newNode =
-               if v1 = v2
-               then
-                 makeNode v1 (orBDD g1 g2) (orBDD d1 d2)
-               else if v1 < v2
-               then
-                 makeNode v1 (orBDD g1 bdd2) (orBDD d1 bdd2)
-               else
-                 makeNode v2 (orBDD bdd1 g2) (orBDD bdd1 d2)
-             in HPairBDD.add orContainer (id1, id2) newNode;
-             newNode
-               
-let implBDD bdd1 bdd2 =
-  orBDD (notBDD bdd1) bdd2
-    
-let equiBDD bdd1 bdd2 =
-  orBDD (andBDD bdd1 bdd2) (andBDD (notBDD bdd1) (notBDD bdd2)) 
-    
-    
-let fromBDT tree =
-  let rec help x =
-    match x with
-    |Leaf(true) -> True
-    |Leaf(false) -> False
-    |Node(var, a, b) ->
-       let g = help a
-       in let d = help b
-          in makeNode var g d
-  in help tree
-    
-
-let rec evaluate valuation = function
-  | True -> true
-  | False -> false
-  | ANode(id, var, t, f) ->
-    if Valuation.getValue valuation var then
-      evaluate valuation t
-    else
-      evaluate valuation f
+    let equiBDD bdd1 bdd2 =
+      orBDD (andBDD bdd1 bdd2) (andBDD (notBDD bdd1) (notBDD bdd2)) 
+        
+        
+    let fromBDT tree =
+      let rec help x =
+        match x with
+        |Leaf(true) -> True
+        |Leaf(false) -> False
+        |Node(var, a, b) ->
+           let g = help a
+           in let d = help b
+              in makeNode var g d
+      in help tree
         
 
-let rec isCombined f = function
-  | True -> true
-  | False -> false
-  | ANode(_, _, a, b) -> f (isCombined f a) (isCombined f b)
-                           
+    let rec evaluate valuation = function
+      | True -> true
+      | False -> false
+      | ANode(id, var, t, f) ->
+        if Valuation.getValue valuation var then
+          evaluate valuation t
+        else
+          evaluate valuation f
+            
 
-let isSatisfiable = isCombined (fun x y -> x || y);;
-let isValid = isCombined (fun x y -> x && y);;
+    let rec isCombined f = function
+      | True -> true
+      | False -> false
+      | ANode(_, _, a, b) -> f (isCombined f a) (isCombined f b)
+                               
 
-let rec satisfact = function
-  | True -> (true, [])
-  | False -> (false, [])
-  | ANode(_, var, a, b) -> let (b1, l1) = satisfact a in
-    if b1 then (true, (var, true)::l1)
-    else let (b2, l2) = satisfact b in (b2, (var, false)::l2)
-                                       
+    let isSatisfiable = isCombined (fun x y -> x || y);;
+    let isValid = isCombined (fun x y -> x && y);;
 
-let create formule = fromBDT(BDT.reduce (BDT.build formule));;
+    let rec satisfact = function
+      | True -> (true, [])
+      | False -> (false, [])
+      | ANode(_, var, a, b) -> let (b1, l1) = satisfact a in
+        if b1 then (true, (var, true)::l1)
+        else let (b2, l2) = satisfact b in (b2, (var, false)::l2)
+                                           
 
-let print bdd =
-  let getValue = function
-    | True ->  "@t"
-    | False -> "@f"
-    | ANode(id, _, _, _) -> string_of_int id
-  in
-  let set = ref IntSet.empty in
-  let rec aux (node : bdd) set =
-    match node with
-    | True -> ()
-    |False -> ()
-    | ANode(id, var, a, b) ->
-      begin
-        if not (IntSet.mem id (!set)) then
+    let create formule = fromBDT(BDT.reduce (BDT.build formule));;
+
+    let print bdd =
+      let getValue = function
+        | True ->  "@t"
+        | False -> "@f"
+        | ANode(id, _, _, _) -> string_of_int id
+      in
+      let set = ref IntSet.empty in
+      let rec aux (node : bdd) set =
+        match node with
+        | True -> ()
+        |False -> ()
+        | ANode(id, var, a, b) ->
           begin
-            set := IntSet.add id (!set);
-            let s = (string_of_int id) ^ " " ^ var ^ " " ^ (getValue a) ^ " " ^ (getValue b) in
-            print_string (s ^ "\n");
-            aux a set;
-            aux b set;
+            if not (IntSet.mem id (!set)) then
+              begin
+                set := IntSet.add id (!set);
+                let s = (string_of_int id) ^ " " ^ var ^ " " ^ (getValue a) ^ " " ^ (getValue b) in
+                print_string (s ^ "\n");
+                aux a set;
+                aux b set;
+              end
           end
-      end
-  in
-  aux bdd set
-    
+      in
+      aux bdd set
         
-let rec createBDD (formule: string formula) = match formule with
-  |True          -> True
-  |False         -> False
-  |Var v         -> makeNode v False True
-  |Not e         -> notBDD (createBDD e)
-  |And (e1, e2)  -> andBDD (createBDD  e1)  (createBDD e2)
-  |Or (e1, e2)   -> orBDD (createBDD e1)  (createBDD e2)
-  |Imp  (e1, e2) -> implBDD (createBDD e1) (createBDD e2)
-  |Equi (e1, e2) -> equiBDD (createBDD e1) (createBDD e2)
+            
+    let rec createBDD (formule: string formula) = match formule with
+      |True          -> True
+      |False         -> False
+      |Var v         -> makeNode v False True
+      |Not e         -> notBDD (createBDD e)
+      |And (e1, e2)  -> andBDD (createBDD  e1)  (createBDD e2)
+      |Or (e1, e2)   -> orBDD (createBDD e1)  (createBDD e2)
+      |Imp  (e1, e2) -> implBDD (createBDD e1) (createBDD e2)
+      |Equi (e1, e2) -> equiBDD (createBDD e1) (createBDD e2)
 
 end
 
@@ -513,9 +502,13 @@ let d6 = new Tetravex.domino 8 4 6 3 6 in
 let d7 = new Tetravex.domino 1 0 1 9 7 in
 let d8 = new Tetravex.domino 6 4 9 0 8 in
 let d9 = new Tetravex.domino 4 2 0 8 9 in
-let l = [d1;d2;d3;d4;d5;d6;d7;d8;d9] in
-let t = new Tetravex.tetravex 3 3 l in
+let d10 = new Tetravex.domino 1 3 3 4 10 in
+let d11 = new Tetravex.domino 3 5 8 2 11 in
+let d12 = new Tetravex.domino 0 1 2 3 12 in
+let d13 = new Tetravex.domino 4 2 3 5 13 in
+let d14 = new Tetravex.domino 2 8 5 8 14 in
+let d15 = new Tetravex.domino 5 9 8 1 15 in
+let l = [d0;d1;d2;d3;d4;d5;d6;d7;d8;d9;d10;d11;d12;d13;d14;d15] in
+let t = new Tetravex.tetravex 4 4 l in
 let solu = t#solve ()
 in  print_list solu ;;
-
-
