@@ -1,7 +1,6 @@
 module type Variable = sig
     type t
     val equal: t -> t -> bool
-    (* compare x y : positive if x > y, 0 if x = y, negative if x < y *)
     val compare: t -> t -> int
     val hash: t -> int
     val toString: t -> string
@@ -24,39 +23,27 @@ module StringVar : Variable with type t = string = struct
 end
 
 type 'a formula =
-    |Var of 'a
-    |True
-    |False
-    |Not of 'a formula
-    |And of 'a formula * 'a formula
-    |Or of 'a formula * 'a formula
-    |Imp of 'a formula * 'a formula
-    |Equi of 'a formula * 'a formula
-;;
+    | Var of 'a
+    | True
+    | False
+    | Not of 'a formula
+    | And of 'a formula * 'a formula
+    | Or of 'a formula * 'a formula
+    | Imp of 'a formula * 'a formula
+    | Equi of 'a formula * 'a formula
 
 (* Gauche : true, droite : false *)
 
-type bdt =
-    |Leaf of bool
-    |Node of string * bdt * bdt
-;;
+type 'a bdt =
+    | Leaf of bool
+    | Node of 'a * 'a bdt * 'a bdt
 
-type bdd = |True
-           |False
-           |ANode of int * string  * bdd * bdd
-;;
+type 'a bdd =
+    | True
+    | False
+    | ANode of int * 'a  * 'a bdd * 'a bdd
 
-(* Modules utiles *)
-
-module S = Set.Make( 
-    struct
-        type t = string
-        let compare = Pervasives.compare
-    end)
-
-module IntSet = Set.Make(  
-    struct
-        type t = int
-        let compare = Pervasives.compare
-    end)
-;;
+module IntSet = Set.Make(struct
+    type t = int
+    let compare = Pervasives.compare
+end)

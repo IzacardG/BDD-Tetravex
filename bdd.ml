@@ -1,147 +1,76 @@
-module Valuation =
-    struct
-        let getValue valuation v =
-            if (not (Hashtbl.mem valuation v)) then
-                false
-            else
-                Hashtbl.find valuation v
-       
+module BDT = functor(Var : Variable) -> struct
 
-        let setValue valuation v x =
-            Hashtbl.add valuation v x
-       
+    module F = Formule(Var)
 
-        let empty () =
-            Hashtbl.create 10000
-        
-    end
-
-module Formule = functor (Var:Variable) ->
-    struct
-
-        type t = Var.t formula;;
-        module S = Set.Make(Var)
-      
-        let rec toString = function
-            | Var e       -> Var.toString e
-            | True        -> "true"
-            | False       -> "false"
-            | Not e       -> "(! " ^ (toString e) ^ ")"
-            | And (e1, e2)   -> "(" ^ (toString e1) ^ " && " ^ (toString e2) ^ ")"
-            | Or (e1,  e2)    -> "(" ^ (toString e1) ^ " || " ^ (toString e2) ^ ")"
-            | Imp (e1, e2)  -> "(" ^ (toString e1) ^ " -> " ^ (toString e2) ^ ")"
-            | Equi (e1, e2)  ->  "(" ^ (toString e1) ^ " <-> " ^ (toString e2) ^ ")"
-        
-
-        let setVar formule =
-            let rec aux = function
-            | Var s ->S.singleton s
-            | True ->  S.empty
-            | False -> S.empty
-            | Not e1 -> aux e1
-            | And (e1, e2) ->S.union (aux e1) (aux e2)
-            | Or (e1, e2) ->S.union (aux e1) (aux e2)
-            | Imp (e1, e2) ->S.union (aux e1) (aux e2)
-            | Equi (e1, e2) ->S.union (aux e1) (aux e2)
-            in S.elements (aux formule)
-        
-
-        let rec eval valuation (formule: t) =
-            match formule with
-            |Var v         -> Valuation.getValue valuation v
-            |True          -> true
-            |False         -> false
-            |Not e         -> not (eval valuation e)
-            |And (e1, e2)  -> (eval valuation e1) && (eval valuation e2)
-            |Or (e1, e2)   -> (eval valuation e1) || (eval valuation e2)
-            |Imp  (e1, e2) -> (eval valuation e2) || not (eval valuation e1)
-            |Equi (e1, e2) -> (eval valuation (Imp(e1,e2))) && (eval valuation (Imp(e2, e1)))
-        
-
-    end
-
-
-module BDT = functor(Var : Variable) ->
-    struct
-
-        module F = Formule(Var)
-
-        let build (formule: F.t) =
-            let i = ref 0 in
-            let rec aux k valuation = function
-                | [] -> k (Leaf(F.eval valuation formule))
-                | t::q ->
-                    begin
-                        (* print_string ((string_of_int !i) ^ ","); *)
-                        i := !i + 1;
-                        let k0 a b =
-                            k (Node(t, a, b))
-                        in
-                        let k1 a =
-                            Valuation.setValue valuation t false;
-                            aux (k0 a) valuation q
-                        in
-                        Valuation.setValue valuation t true;
-                        aux k1 valuation q
-                    end
-            in
-            aux (fun x -> x) (Valuation.empty ()) (F.setVar formule)
-        
-
-        let isLeaf = function
-            | Leaf(_) -> true
-            | _ -> false
-        
-
-        let rec reduce tree =
-            match tree with
-            | Leaf(_) -> tree
-            | Node(_, Leaf(b1), Leaf(b2)) -> if b1 == b2 then Leaf(b1) else tree
-            | Node(v, t1, t2) ->
+    let build (formule: F.t) =
+        let i = ref 0 in
+        let rec aux k valuation = function
+            | [] -> k (Leaf(F.eval valuation formule))
+            | t::q ->
                 begin
-                    let a = reduce t1 in
-                    let b = reduce t2 in
-                    if (isLeaf a && isLeaf b) then
-                        reduce (Node(v, a, b))
-                    else
-                        Node(v, a, b)
+                    (* print_string ((string_of_int !i) ^ ","); *)
+                    i := !i + 1;
+                    let k0 a b =
+                        k (Node(t, a, b))
+                    in
+                    let k1 a =
+                        Valuation.setValue valuation t false;
+                        aux (k0 a) valuation q
+                    in
+                    Valuation.setValue valuation t true;
+                    aux k1 valuation q
                 end
-        
-
-        let rec toString tree = 
-          match tree with
-          |Leaf(true) -> "L(T)"
-          |Leaf(false) -> "L(F)"
-          |Node(x,l,r) -> "N(" ^x ^ "," ^ (toString l) ^ "," ^ (toString r) ^ ")"
-        
-    end
-;;
-
-
-
-module BDD = functor(Var: Variable) ->
-struct
-
-module F = Formule(Var)
-module B = BDT(Var)
-  
-  let getID = function
-    |False -> 0
-    |True -> 1
-    |ANode(x,_,_,_) -> x;;
-  
-  let equalBDD bdd1 bdd2 = (getID bdd1) = (getID bdd2);;
-
-  let bij x y =
-    (x+y)*(x+y+1)/2  + x
+        in
+        aux (fun x -> x) (Valuation.empty ()) (F.setVar formule)
+   
+    let isLeaf = function
+        | Leaf(_) -> true
+        | _ -> false
     
-  module H = struct
-    type t = Var.t*int*int
-    let equal (v1, g1, d1) (v2, g2, d2) =
-      v1 = v2 && g1 = g2 && d1 = d2
-    let hash (v, g, d) =
-      Hashtbl.hash (v,g,d)
-  end
+    let rec reduce tree =
+        match tree with
+        | Leaf(_) -> tree
+        | Node(_, Leaf(b1), Leaf(b2)) -> if b1 == b2 then Leaf(b1) else tree
+        | Node(v, t1, t2) ->
+            begin
+                let a = reduce t1 in
+                let b = reduce t2 in
+                if (isLeaf a && isLeaf b) then
+                    reduce (Node(v, a, b))
+                else
+                    Node(v, a, b)
+            end
+
+    let rec toString tree = 
+      match tree with
+      |Leaf(true) -> "L(T)"
+      |Leaf(false) -> "L(F)"
+      |Node(x,l,r) -> "N(" ^x ^ "," ^ (toString l) ^ "," ^ (toString r) ^ ")"
+    
+end
+
+module BDD = functor(Var: Variable) -> struct
+
+    module F = Formule(Var)
+    module B = BDT(Var)
+  
+    let getID = function
+    | False -> 0
+    | True -> 1
+    | ANode(x,_,_,_) -> x
+  
+    let equalBDD bdd1 bdd2 = (getID bdd1) = (getID bdd2)
+
+    let bij x y =
+        (x+y)*(x+y+1)/2  + x
+    
+    module H = struct
+        type t = Var.t*int*int
+        let equal (v1, g1, d1) (v2, g2, d2) =
+            v1 = v2 && g1 = g2 && d1 = d2
+        let hash (v, g, d) =
+            Hashtbl.hash (v,g,d)
+    end
   
   module HBDD = Hashtbl.Make(H)
     
@@ -280,8 +209,8 @@ module B = BDT(Var)
       | ANode(_, _, a, b) -> f (isCombined f a) (isCombined f b)
                                
 
-    let isSatisfiable = isCombined (fun x y -> x || y);;
-    let isValid = isCombined (fun x y -> x && y);;
+    let isSatisfiable bdd = isCombined (fun x y -> x || y) bdd
+    let isValid bdd = isCombined (fun x y -> x && y) bdd
 
     let rec satisfact = function
       | True -> (true, [])
@@ -291,30 +220,30 @@ module B = BDT(Var)
         else let (b2, l2) = satisfact b in (b2, (var, false)::l2)
                                            
 
-    let create formule = fromBDT(B.reduce (B.build formule));;
+    let create formule = fromBDT(B.reduce (B.build formule))
 
     let print bdd =
-      let getValue = function
-        | True ->  "@t"
-        | False -> "@f"
-        | ANode(id, _, _, _) -> string_of_int id
-      in
-      let set = ref IntSet.empty in
-      let rec aux (node : bdd) set =
-        match node with
-        | True -> ()
-        |False -> ()
-        | ANode(id, var, a, b) ->
-          begin
-            if not (IntSet.mem id (!set)) then
+        let getValue = function
+            | True ->  "@t"
+            | False -> "@f"
+            | ANode(id, _, _, _) -> string_of_int id
+          in
+          let set = ref IntSet.empty in
+          let rec aux node set =
+            match node with
+            | True -> ()
+            | False -> ()
+            | ANode(id, var, a, b) ->
               begin
-                set := IntSet.add id (!set);
-                let s = (string_of_int id) ^ " " ^ var ^ " " ^ (getValue a) ^ " " ^ (getValue b) in
-                print_string (s ^ "\n");
-                aux a set;
-                aux b set;
+                if not (IntSet.mem id (!set)) then
+                  begin
+                    set := IntSet.add id (!set);
+                    let s = (string_of_int id) ^ " " ^ Var.toString var ^ " " ^ (getValue a) ^ " " ^ (getValue b) in
+                    print_string (s ^ "\n");
+                    aux a set;
+                    aux b set;
+                  end
               end
-          end
       in
       aux bdd set
         
@@ -331,3 +260,7 @@ module B = BDT(Var)
       |Equi (e1, e2) -> equiBDD (createBDD e1) (createBDD e2)
 
 end
+
+module IntBDD = BDD(IntVar)
+module StringBDD = BDD(StringVar)
+module StringBDT = BDT(StringVar)
