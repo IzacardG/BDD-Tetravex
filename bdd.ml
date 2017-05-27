@@ -16,7 +16,7 @@ module Valuation =
         
     end
 
-module Logic = functor (Var:Variable) ->
+module Formule = functor (Var:Variable) ->
     struct
       
         let rec toString = function
@@ -57,13 +57,13 @@ module Logic = functor (Var:Variable) ->
     end
 
 
-module BDT =
+module BDT = functor(F : Formule) ->
     struct
 
         let build formule =
             let i = ref 0 in
             let rec aux k valuation = function
-                | [] -> k (Leaf(Formule.eval valuation formule))
+                | [] -> k (Leaf(F.eval valuation formule))
                 | t::q ->
                     begin
                         (* print_string ((string_of_int !i) ^ ","); *)
@@ -79,13 +79,13 @@ module BDT =
                         aux k1 valuation q
                     end
             in
-            aux (fun x -> x) (Valuation.empty ()) (Formule.setVar formule)
-        ;;
+            aux (fun x -> x) (Valuation.empty ()) (F.setVar formule)
+        
 
         let isLeaf = function
             | Leaf(_) -> true
             | _ -> false
-        ;;
+        
 
         let rec reduce tree =
             match tree with
@@ -100,20 +100,20 @@ module BDT =
                     else
                         Node(v, a, b)
                 end
-        ;;
+        
 
         let rec toString tree = 
           match tree with
           |Leaf(true) -> "L(T)"
           |Leaf(false) -> "L(F)"
           |Node(x,l,r) -> "N(" ^x ^ "," ^ (toString l) ^ "," ^ (toString r) ^ ")"
-        ;;
+        
     end
 ;;
 
 
 
-module BDD =
+module BDD = functor(F:Formule) ->
 struct
   
   let getID = function
@@ -310,7 +310,7 @@ struct
       aux bdd set
         
             
-    let rec createBDD (formule: string formula) = match formule with
+    let rec createBDD (formule: F) = match formule with
       |True          -> True
       |False         -> False
       |Var v         -> makeNode v False True
