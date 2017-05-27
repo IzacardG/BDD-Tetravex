@@ -57,8 +57,10 @@ module Formule = functor (Var:Variable) ->
     end
 
 
-module BDT = functor(F : Formule) ->
+module BDT = functor(Var : Variable) ->
     struct
+
+        module F = Formule(Var)
 
         let build formule =
             let i = ref 0 in
@@ -113,8 +115,11 @@ module BDT = functor(F : Formule) ->
 
 
 
-module BDD = functor(F:Formule) ->
+module BDD = functor(Var: Variable) ->
 struct
+
+module F = Formule(Var)
+module B = BDT(Var)
   
   let getID = function
     |False -> 0
@@ -282,7 +287,7 @@ struct
         else let (b2, l2) = satisfact b in (b2, (var, false)::l2)
                                            
 
-    let create formule = fromBDT(BDT.reduce (BDT.build formule));;
+    let create formule = fromBDT(B.reduce (B.build formule));;
 
     let print bdd =
       let getValue = function
@@ -310,10 +315,11 @@ struct
       aux bdd set
         
             
-    let rec createBDD (formule: F) = match formule with
+    let rec createBDD formule =
+    match formule with
+      |Var v         -> makeNode v False True
       |True          -> True
       |False         -> False
-      |Var v         -> makeNode v False True
       |Not e         -> notBDD (createBDD e)
       |And (e1, e2)  -> andBDD (createBDD  e1)  (createBDD e2)
       |Or (e1, e2)   -> orBDD (createBDD e1)  (createBDD e2)
