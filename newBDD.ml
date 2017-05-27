@@ -1,7 +1,10 @@
+open Logic
+
 (* Types *)
 
+
 type 'a formula =
-    |Var of 'a
+    |Var of variable
     |True
     |False
     |Not of 'a formula
@@ -42,21 +45,21 @@ module Valuation =
                 false
             else
                 Hashtbl.find valuation v
-        ;;
+       
 
         let setValue valuation v x =
             Hashtbl.add valuation v x
-        ;;
+       
 
         let empty () =
             Hashtbl.create 10000
-        ;;
+        
     end
-;;
+
 
     
 
-module Formule =
+module Formule(var:variable) =
     struct
 
         let rec toString = function
