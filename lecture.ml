@@ -51,15 +51,15 @@ module Read =
             let r_false = Str.regexp "false" in
             let r_and = Str.regexp "&&" in
             let r_or = Str.regexp "||" in
-            let r_imp = Str.regexp "->" in
             let r_equi = Str.regexp "<->" in
+            let r_imp = Str.regexp "->" in
             let a = Str.global_replace r_space "" s in
             let b = Str.global_replace r_true "t" a in
             let c = Str.global_replace r_false "f" b in
             let d = Str.global_replace r_and "&" c in
             let e = Str.global_replace r_or "|" d in
-            let f = Str.global_replace r_imp ">" e in
-            Str.global_replace r_equi "=" f
+            let f = Str.global_replace r_equi "=" e in
+            Str.global_replace r_imp ">" f
         ;;
         
         let cut s =
@@ -132,6 +132,7 @@ module Read =
             | Entier(x)::q -> (Var(x), q)
             | Vrai::q -> (True, q)
             | Faux::q -> (False, q)
+            | Non::q -> let (a, v) = eval_neg q in (Not a, v)
             | _ -> (Var(-6), [])
         ;;
         
