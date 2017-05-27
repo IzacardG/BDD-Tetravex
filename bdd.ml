@@ -18,9 +18,12 @@ module Valuation =
 
 module Formule = functor (Var:Variable) ->
     struct
+
+        type t = Var.t formula;;
+        module S = Set.Make(Var)
       
         let rec toString = function
-            | Var e       -> e
+            | Var e       -> Var.toString e
             | True        -> "true"
             | False       -> "false"
             | Not e       -> "(! " ^ (toString e) ^ ")"
@@ -43,7 +46,8 @@ module Formule = functor (Var:Variable) ->
             in S.elements (aux formule)
         
 
-        let rec eval valuation = function
+        let rec eval valuation (formule: t) =
+            match formule with
             |Var v         -> Valuation.getValue valuation v
             |True          -> true
             |False         -> false
@@ -62,7 +66,7 @@ module BDT = functor(Var : Variable) ->
 
         module F = Formule(Var)
 
-        let build formule =
+        let build (formule: F.t) =
             let i = ref 0 in
             let rec aux k valuation = function
                 | [] -> k (Leaf(F.eval valuation formule))
@@ -132,7 +136,7 @@ module B = BDT(Var)
     (x+y)*(x+y+1)/2  + x
     
   module H = struct
-    type t = string*int*int
+    type t = Var.t*int*int
     let equal (v1, g1, d1) (v2, g2, d2) =
       v1 = v2 && g1 = g2 && d1 = d2
     let hash (v, g, d) =
