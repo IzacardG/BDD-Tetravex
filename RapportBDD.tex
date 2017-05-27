@@ -4,6 +4,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
+\usepackage{syntax}
+\usepackage{amsfonts}
 
 \begin{document}
 \title{Diagramme de décision binaire et Tetravex}
@@ -14,6 +16,47 @@
 
 \section{Formules logiques}
 \subsection{Conversion d'une chaîne de caractère en formule logique}
+
+Afin de convertir la chaîne de caractère (supposée correcte) reçue en entrée standard, nous procédons en deux étapes : analyse lexicale puis analyse syntaxique.
+
+\subsubsection{Analyse lexicale}
+
+Cette étape se décompose elle-même en deux sous-étapes.
+La première, très simple, consiste en une simplification de la chaîne.
+Les espaces sont supprimés, et tous les symboles (exceptés les entiers) sont réduits à un caractère : << <-> >> devient << = >>, << -> >> devient << > >>, << \&\& >> devient << \& >>, << || >> devient << | >>, << true >> devient << t >> et << false >> devient << f >>.
+
+La seconde consiste à transformer la chaîne simplifiée en tokens (unités lexicales).
+Pour cela, on lit récursivement les caractères de la chaîne, en gardant en mémoire le nombre courant (initialisé à $0$).
+Si le caractère est un chiffre, on l'ajoute : $nombreCourant = 10 * nombreCourant + chiffre$.
+Sinon dans le cas où le caractère n'est pas un chiffre, si le nombre courant est non nul, on l'ajoute au début de notre liste de tokens.
+On convertit alors le caractère qui n'est pas un chiffre en token de l'opérateur qu'il représente.
+
+\subsubsection{Analyse syntaxique}
+
+Afin de convertir la liste de tokens en une formule, tout en respectant les priorités des différents opérateurs, on définit la grammaire suivante :
+
+\setlength{\grammarparsep}{0.3em}
+\begin{grammar}
+
+<Équivalence> = <Implication> | <Implication> \Leftrightarrow{} <Équivalence>
+
+<Implication> = <Disjonction> | <Disjonction> \Rightarrow{} <Implication>
+
+<Disjonction> = <Conjonction> | <Conjonction> \lor{} <Disjonction>
+
+<Conjonction> = <Brique> | <Brique> \land{} <Conjonction>
+
+<Brique> = $n \in{} \mathbb{N}^{*}$
+\alt \top
+\alt \bot
+\alt \neg <Brique>
+\alt ( <Équivalence> )
+
+\end{grammar}
+
+Avec ces règles, lors d'un parcours de gauche à droite, il suffit simplement de regarder le prochain token pour savoir quelle règle doit être appliquée.
+La conversion d'une chaîne de caractère en formule est donc faite en temps linéaire de la taille de l'entrée.
+
 \subsection{Réduction du Tetravex à un problème de satisfiabilité}
 
 \section{Génération des diagrammes de décision binaire et résolution du Tetravex}
