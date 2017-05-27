@@ -1,10 +1,8 @@
-open Logic
-
 (* Types *)
 
-
+module 
 type 'a formula =
-    |Var of variable
+    |Var of variable 
     |True
     |False
     |Not of 'a formula
@@ -59,9 +57,19 @@ module Valuation =
 
     
 
-module Formule(var:variable) =
+module Logic = functor (Variable:Logic.Variable) ->
     struct
-
+      
+        type 'a formula =
+        |Var of Variable 
+        |True
+        |False
+        |Not of 'a formula
+        |And of 'a formula * 'a formula
+        |Or of 'a formula * 'a formula
+        |Imp of 'a formula * 'a formula
+        |Equi of 'a formula * 'a formula
+               
         let rec toString = function
             | True        -> "true"
             | False       -> "false"
@@ -71,7 +79,7 @@ module Formule(var:variable) =
             | Or (e1,  e2)    -> "(" ^ (toString e1) ^ " || " ^ (toString e2) ^ ")"
             | Imp (e1, e2)  -> "(" ^ (toString e1) ^ " -> " ^ (toString e2) ^ ")"
             | Equi (e1, e2)  ->  "(" ^ (toString e1) ^ " <-> " ^ (toString e2) ^ ")"
-        ;;
+        
 
         let setVar formule =
             let rec aux = function
@@ -84,7 +92,7 @@ module Formule(var:variable) =
             | Imp (e1, e2) ->S.union (aux e1) (aux e2)
             | Equi (e1, e2) ->S.union (aux e1) (aux e2)
             in S.elements (aux formule)
-        ;;
+        
 
         let rec eval valuation = function
             |True          -> true
@@ -95,10 +103,10 @@ module Formule(var:variable) =
             |Or (e1, e2)   -> (eval valuation e1) || (eval valuation e2)
             |Imp  (e1, e2) -> (eval valuation e2) || not (eval valuation e1)
             |Equi (e1, e2) -> (eval valuation (Imp(e1,e2))) && (eval valuation (Imp(e2, e1)))
-        ;;
+        
 
     end
-;;
+
 
 module BDT =
     struct
