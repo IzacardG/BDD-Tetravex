@@ -1,17 +1,6 @@
 (* Types *)
 
-type formula =
-    |Var of int
-    |True
-    |False
-    |Not of formula
-    |And of formula * formula
-    |Or of formula * formula
-    |Imp of formula * formula
-    |Equi of formula * formula
-;;
-
-module Read =
+module ReadFormule =
     struct
 
         type grammaire =
@@ -94,7 +83,7 @@ module Read =
             aux 0 0
         ;;
 
-        let rec eval_equi (u: grammaire list) : formula  * grammaire list =
+        let rec eval_equi u =
             let (a, q1) = eval_imp u in
             match q1 with
             | [] -> (a, [])
