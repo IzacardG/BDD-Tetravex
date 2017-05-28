@@ -1,3 +1,5 @@
+include Bdd
+
 module Tetravex =
     struct
 

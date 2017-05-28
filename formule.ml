@@ -1,3 +1,6 @@
+include Types
+
+
 module Valuation = struct
 
     let getValue valuation v =

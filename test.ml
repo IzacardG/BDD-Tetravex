@@ -1,3 +1,5 @@
+include Tetravex
+
 module Test = struct
 
     let () =
@@ -57,4 +59,9 @@ module Test = struct
         let f = ReadFormule.eval "(1 -> 2) <-> (2 || ~1)" in
         assert(IntBDD.isValid (IntBDD.create f))
 
+    
+
 end
+
+
+   

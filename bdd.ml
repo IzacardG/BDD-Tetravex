@@ -1,3 +1,5 @@
+include Formule
+
 module BDT = functor(Var : Variable) -> struct
 
     module F = Formule(Var)
@@ -264,3 +266,10 @@ end
 module IntBDD = BDD(IntVar)
 module StringBDD = BDD(StringVar)
 module StringBDT = BDT(StringVar)
+
+include Str
+
+let simplify s = 
+ let r_space = Str.regexp " " in
+ Str.global_replace r_space "" s
+   
