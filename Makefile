@@ -1,5 +1,5 @@
-types: types.ml
-	ocamlbuild types.native
+test:
+	ocamlbuild -lib str -r test.native
 
-formule: formule.ml types.ml
-	ocamlbuild types.native formule.native
+bdd:
+	ocamlbuild -lib str -r main.native
