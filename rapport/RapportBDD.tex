@@ -59,6 +59,41 @@ La conversion d'une chaîne de caractère en formule est donc faite en temps lin
 
 \subsection{Réduction du Tetravex à un problème de satisfiabilité}
 
+Pour résoudre un Tetravex à partir de notre bibliothèque de manipulations de BDD, il faut réduire le problème à un problème de logique, c'est-à-dire convertir le problème en une formule, qui ne sera satisfiable que si le Tetravex est résoluble.
+Pour cela, en notant $m$ le nombre de carrés, on considère $n.p.m$ variables, de type \textit{string} : {\NoAutoSpaceBeforeFDP{}"a,b:c"} avec $a \in{} [1, n], b \in{} [1, p], c \in{} [1, m]$, qui est vraie si, et seulement, le carré numéroté $c$ (à partir de 1) est à la position $(a, b)$ dans le Tetravex (qui commence en haut à gauche à $(1, 1)$).
+
+À partir de là, on construit plusieurs formules, que l'on combinera ensuite.
+La formule $impliqueDroite(a, b, c)$ dit que si on place le carré $c$ en $(a, b)$, alors il est nécessaire d'avoir (au moins) un carré compatible à droite (dont le chiffre à gauche est égal à celui de $c$ à droite).
+Par exemple : $impliqueDroite(1, 1, 1) :=$ {\NoAutoSpaceBeforeFDP{}"2,1:2" \lor{} "2,1:3" \lor{} "2,1:5"}.
+À noter que si un tel carré n'existe pas, la formule est simplement réduite à \bot{}.
+
+On définit de la même manière $impliqueBas(a, b, c)$.
+
+Un placement devant être unique (c'est-à-dire qu'un carré ne place au maximum qu'une seule fois), on définit $placerUnique(a, b, c)$ par la conjonction de la négation de tous les autres placements de $c$.
+Par exemple, si $n = p = 2$ : $placerUnique(1, 1, 1) :=$ {\NoAutoSpaceBeforeFDP{} \neg "2,1:1" \land{} \neg "1,2:1" \land{} \neg "2,2:1"}.
+
+À chaque emplacement, il doit y avoir (au maximum) un seul carré, d'où $aucunAutre(a, b, c)$.
+Par exemple : $aucunAutre(1, 1, 1) :=$ {\NoAutoSpaceBeforeFDP{} \neg "1,1:2" \land{} \neg "1,1:3" \land{} \neg "1,1:4" \land{} \neg "1,1:5"}.
+
+On les combine dans le cas d'un placement :
+
+$placerPotentiellement(a, b, c) := ${\NoAutoSpaceBeforeFDP{}"a,b:c"}$ \Rightarrow{} impliqueDroite(a, b, c) \land{} impliqueBas(a, b, c) \land{} placerUnique(a, b, c) \land{} aucunAutre(a, b, c)$.
+
+On combine alors tous les $placerPotentiellement(a, b, c)$ :
+
+$toutPlacer := \land{} placerPotentiellement(a, b, c)$ $(\forall{} a, b, c)$
+
+On a alors la garantie que si on a une solution, alors elle est valide.
+Il manque donc simplement l'existence.
+
+$exist(a, b) := {\NoAutoSpaceBeforeFDP{}"a,b:1" \lor{} "a,b:2" \lor{} "a,b:3" \lor{}}$...
+
+$existence := \land{} exist(a, b)$ $(\forall{} a, b)$
+
+$tetravex := existence \land{} toutPlacer$
+
+$tetravex$ est la réduction du Tetravex à un problème de satisfiabilité. On peut donc le résoudre à l'aide des BDD.
+
 \section{Génération des diagrammes de décision binaire et résolution du Tetravex}
 \subsection{A partir d'arbres réduits}
 Afin de construire le diagramme de décision binaire, nous avons dans un premier temps construit l'arbre de décision binaire puis nous l'avons réduit en suivant la démarche de l'énoncé.
