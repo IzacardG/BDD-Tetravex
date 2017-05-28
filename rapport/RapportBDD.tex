@@ -61,7 +61,27 @@ La conversion d'une chaîne de caractère en formule est donc faite en temps lin
 
 \section{Génération des diagrammes de décision binaire et résolution du Tetravex}
 \subsection{A partir d'arbres réduits}
-\subsection{Par combinaisons de diagrammes}
-\subsection{Utilisation de la mémoïsation}
+Afin de construire le diagramme de décision binaire, nous avons dans un premier temps construit l'arbre de décision binaire puis nous l'avons réduit en suivant la démarche de l'énoncé.
 
+On définit le type d'arbre binaire de décision comme étant un type somme de feuilles étiquettés par un booléen, et de noeuds ayant comme étiquette une variable de type abstrait, et deux fils qui sont des arbres binaires de décision, l'un situé à gauche, l'autre à droite. Pour construire l'abre on utilise une table de hashage pour mémoriser les valeurs booléenne que l'on a associées aux différentes varibles au cours du parcours du graphe : a chaque fois que l'on identifie une variable, on explore dans un premier temps le côté de l'arbre où cette variable prend la valeur faux puis l'autre côté où l'on fixe sa valeur à vrai. Lorsqu'il n'y a plus de variable dans l'expression, on évalue la formule booléenne avec la valuation ainsi défini.
+
+Pour supprimer les noeuds qui n'interviennent pas dans l'évaluation de l'expression on parcourt l'arbre à partir des noeuds les plus bas en répérant les noeuds qui ont deux feuilles identiques, si un noeud a deux feuilles identiques remplace ce noeud par la feuille.
+
+On définit ensuite le type d'un diagramme binaire : un diagramme binaire est définit par un identifiant de type entier que l'on veut unique, un objet du type abstrait Variable, un fils gauche qui est un diagramme de décision binaire, et un fils droit du même type.  
+
+Pour passer au diagramme de décision binaire, on parcourt l'arbre afin de déterminer un identifiant pour chaque noeud. On utilise en parallèle une table de hashage, dont les valeurs des arbres de décisions binaires. Lorsqu'on traite un noeud, on calcule son identifiant, s'il est déjà dans la table on renvoie le noeud enregistré dans la table. Sinon on crée un nouveau noeud avec un nouvel identifiant.
+
+Une manière naïve de procéder et de convertir l'arbre définit par le noeud courant en une formule propositionnelle, et de la voir comme une chaîne de caractères que l'on va utiliser comme clef.
+
+Néanmoins cette approche n'est pas efficace. Une approche plus efficace consiste à assigner l'identifiant $0$ à la feuille $False$ et l'identifiant 1 à la feuille $True$. On définit ensuite la clef d'un noeud à partir des identifiants de ses fils et de la variable du noeud. Si la clef est présente dans la table, on retourne le noeud asssocié. Sinon on associe à ce noeud un identifiant qui n'a pas encore été utilisé. En pratique on utilise une référence que l'on incrémente à chaque nouveau noeud. 
+\subsection{Par combinaisons de diagrammes}
+On peut également construire le diagramme de décision binaire directement à partir de la formule propositionnelle. Pour se faire on définit les opérations logiques associés aux connecteurs sur les diagrammes de décision binaires. Par exemple on définit une opération $AndBDD$ qui prend en arguments deux diagrammes de décision binaires $Node(id1, v1, g1, d1)$ et $Node(id2, v2, g2, d2)$, et renvoie le diagramme obtenu en connectant les deux formules propositionnelles qu'ils représentent par l'opérateur logique $et$. Si les deux diagrammes ont le même identifiant, ce sont les mêmes et on renvoie l'un des deux diagrammes. Sinon on compare les deux variables $v1$ et $v2$ affectés à chacun des diagrammes.
+\begin{itemize}
+\item Si $v1 = v2$ on effectue l'opération binaire sur $g1$ et $g2$, ainsi que $d1$ et $d2$ avant de renvoyer le noeud créé à partir de la variable $v1$ et des deux diagrammes obtenus.
+\item Si $v1 < v2$ on renvoie le noeud étiquetté la variable $v1$, à gauche on met le diagramme obtenu en effectuant l'opération sur les diagrammes $g1$ et $Node(id2, v2, g2, d2)$, à droite on a le diagramme obtenu en effectuant l'opération sur les diagrammes $d1$ et $Node(id2, v2, g2, d2)$.
+\item Si $v1 > v2$ on effectue la même opération qu'au-dessus en échangeant les roles.
+\end{itemize}
+  
+\subsection{Utilisation de la mémoïsation}
+La complexité de l'opération binaire présentée à la section précédente est exponentielle en la taille de l'arbre, ce qui ne permet pas de résoudre le problème du Tetravex pour des dimensions supérieurs à $2$x$2$. Pour améliorer l'opération précédente on utilise un processus de mémoïsation : on utilise pour chaque opération binaire une table de hashage où les clefs sont de types $int * int$, déterminés par les identifiants des diagrammes binaires. Pour que l'identifiant soit unique la première composante de la clef est l'identifiant le plus petit. A chaque appelle de la fonction $AndBDD$ on vérifie que l'opération n'a pas encore été réalisée, sinon on effectue l'opération et on ajoute sa valeur dans la table. On fait de même avec l'opération unaire de négation en utilisant une table de hashage dont les clefs sont les identifiants des diagrammes de décision binaire. On définit les autres opérations à partir de ces trois opérations (on aurait également pu se limiter à 2 opérations). L'utilisation de ce procédé permet d'amortir le coût de l'opération. On peut ainsi résoudre des Tetravex dont les tailles vont jusqu'à
 \end{document}
