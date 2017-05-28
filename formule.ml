@@ -89,7 +89,7 @@ module ReadFormule =
             | [] -> (a, [])
             | Equ::q2 -> 
                 let (b, q3) = eval_equi q2
-                in (Equi(a, b), q3)
+                in (types.Equi(a, b), q3)
             | _ -> (a, q1)
         and eval_imp u =
             let (a, q1) = eval_dis u in
