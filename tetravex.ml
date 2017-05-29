@@ -129,7 +129,7 @@ module Tetravex =
                 method findDomino i j q =
                   let rec help i j q =
                     match q with
-                    |[] -> failwith "Not found"
+                    |[] -> -1
                     |s::b ->
                       let s = Str.global_replace(Str.regexp ",") ":"  s in
                       let list = Str.split(Str.regexp ":") s in
@@ -142,7 +142,7 @@ module Tetravex =
                         
                 method printFindDomino id =
                   let rec help id q = match q with
-                  |[] -> failwith "Domino non présent"
+                  |[] -> ()
                   |a::b -> if a#id = id then
                       self#printDomino a
                     else help id b
