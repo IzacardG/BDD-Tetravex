@@ -3,6 +3,7 @@ include Bdd
 module Tetravex =
     struct
 
+
         class domino (h: int) (b: int) (g: int) (d: int) (i: int) =
             object
                 method id = i
@@ -10,8 +11,9 @@ module Tetravex =
                 method bas = b
                 method gauche = g
                 method droite = d
+
             end
-        
+          
 
         class tetravex (n: int) (p: int) (l: domino list) =
             object (self)
@@ -113,5 +115,47 @@ module Tetravex =
                     let bdd = StringBDD.andBDD f1  f2 in
                     let (b, l) = StringBDD.satisfact bdd in
                     if b then List.map (fun (x, _) ->  x) (List.filter (fun (_, x) ->not x) l) else []
+
+                method printDomino (d:domino) =
+                  print_int d#haut;
+                  print_string " ";
+                  print_int d#bas;
+                  print_string " ";
+                  print_int d#gauche;
+                  print_string " ";
+                  print_int d#droite;
+                  print_string "\n";
+
+                method findDomino i j q =
+                  let rec help i j q =
+                    match q with
+                    |[] -> failwith "Not found"
+                    |s::b ->
+                      let s = Str.global_replace(Str.regexp ",") ":"  s in
+                      let list = Str.split(Str.regexp ":") s in
+                      let x::y::id::d = list in
+                      if (int_of_string x) = i && (int_of_string y) = j
+                      then (int_of_string id)
+                      else help i j b
+                  in  help i j q 
+           
+                        
+                method printFindDomino id =
+                  let rec help id q = match q with
+                  |[] -> failwith "Domino non présent"
+                  |a::b -> if a#id = id then
+                      self#printDomino a
+                    else help id b
+                  in help id dominos
+
+
+                method printsolu q =
+                  for i = 1 to n   do
+                    for j = 1 to p do
+                      let id = self#findDomino i j q in
+                      self#printFindDomino id
+                    done
+                  done
+                    
             end
 end

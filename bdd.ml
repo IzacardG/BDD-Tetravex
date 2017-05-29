@@ -220,7 +220,11 @@ module BDD = functor(Var: Variable) -> struct
       | ANode(_, var, a, b) -> let (b1, l1) = satisfact a in
         if b1 then (true, (var, true)::l1)
         else let (b2, l2) = satisfact b in (b2, (var, false)::l2)
-                                           
+
+    let rec print_satisfact = function
+      | (_, []) -> ()
+      | (false,q) -> ()
+      | (true, ((v,b)::a)) -> print_string (Var.toString v); if b then print_string " @f\n" else print_string " @t\n"; print_satisfact (true, a) 
 
     let create formule = fromBDT(B.reduce (B.build formule))
 
@@ -267,9 +271,3 @@ module IntBDD = BDD(IntVar)
 module StringBDD = BDD(StringVar)
 module StringBDT = BDT(StringVar)
 
-include Str
-
-let simplify s = 
- let r_space = Str.regexp " " in
- Str.global_replace r_space "" s
-   
