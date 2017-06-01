@@ -77,7 +77,7 @@ module BDD = functor(Var: Variable) -> struct
   module HBDD = Hashtbl.Make(H)
     
   let currID = ref 2
-  let nodeSet  = HBDD.create 2047
+  let nodeSet  = HBDD.create 100
     
     
   let makeNode v g d =
