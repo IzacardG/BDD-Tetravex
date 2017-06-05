@@ -1,0 +1,84 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}              % Only when compiling
+\usepackage[T1]{fontenc}                 % with PDFLaTeX.
+\usepackage[frenchb]{babel}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+
+
+\title{Diagramme de décision binaire et Tetravex}
+\author{Thibault Dardinier \\ Gautier Izacard}
+
+\begin{document}
+
+\maketitle
+
+
+\begin{frame}{Création du diagramme de décision binaire d'une formule propositionnelle}
+Plusieurs pistes explorées :
+\begin{itemize}
+\item Création de l'arbre de décision binaire puis réduction vers le diagramme de décision binaire
+\item Création du diagramme directement à partir de la formule propositionnelle
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Création de l'arbre de décision binaire}
+Au cours du parcourt de la formule propositionnelle on construit la valuation progressivement en utilisant une table de hashage. 
+\begin{itemize}
+\item A chaque fois que l'on considère une variable qui n'est pas encore dans la table de hashage, on l'ajoute à la table.
+\item On explore dans un premier temps le fils gauche en associant cette variable à faux.
+\item Lorsqu'il n'y a plus de variables non affectées on évalue la formule avec la valuation ainsi construite.
+\item Puis le fils droit en l'associant à vrai.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Suppression des noeuds inutiles et passage au diagramme}
+Suppressions des noeuds inutiles:
+\begin{itemize}
+\item Opération récursive
+\item On commence par les noeuds les plus bas dans l'arbre
+\item Si un noeud possède deux feuilles identiques, on le remplace par la feuille
+\item Puis on remonte l'arbre
+\end{itemize}
+Pour passer au diagramme de décision binaire on souhaite déterminer un identifiant pour chaque noeud.
+\begin{itemize}
+\item On parcout l'arbre, si le noeud est reconnu, on le réutilise, sinon on le crée
+\item Pour reconnaître le noeud on utilise une table de hashage dont les clefs sont les chaînes de caractères représentant la formule propositionnelle et les valeurs sont les noeuds.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Identification plus efficace}
+L'identification précédente n'est pas efficace car on ne stocke par sur chaque noeud la chaîne de caractères qu'il représente. Utiliser l'identifiant de chaque noeud permet d'être plus efficace à la fois au niveau de la table de hashage, et au niveau du parcourt de l'arbre.
+\begin{itemize}
+\item Déterminer la clef de chaque noeud dans la table de hashage en fonction des identifiants des deux fils et de la variable stockée par le noeud
+\item Si la clef existe, on utilise le noeud déjà construit sinon on définit un identifiant qui n'est pas encore utilisé
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Création par combinaisons de diagrammes}
+Création du diagramme directement à partir de la formule propositionnelle :
+\begin{itemize}
+\item Définition des opérations binaires et unaires définit sur les formules propositionnelles
+\item Définition récursive des fonctions
+\item Utilisation de l'identifiant pour ne pas combiner les mêmes noeuds
+\item Utilisation de l'ordre sur les variables pour ordonner le diagramme
+\item Sans mémoïsation lors de l'utilisation des opérateurs binaires cette approche n'est pas efficace
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Résultats sur le problème du Tetravex}
+\begin{itemize}
+\item Conversion de l'arbre vers le diagramme : 
+\begin{itemize}
+\item Tetravex $2$x$2$ résolu avec 4 carrés, mais débordement de pile à partir de 4 carrés. Utilisation du style par passage de continuation pour réduire la taille de la pile.
+\end{itemize}
+\item Création de l'arbre à partir de la formule propositionnelle, en utilisant les opérateurs binaires avec mémoïsation
+\begin{itemize}
+\item Résolution d'un tetravex $4$x$4$ en 5 secondes environ.
+\end{itemize}
+\end{itemize}
+\end{frame}
+	
+
+\end{document}
