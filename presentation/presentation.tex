@@ -96,7 +96,7 @@ Plusieurs pistes explorées :
 \end{frame}
 
 \begin{frame}{Création de l'arbre de décision binaire}
-Au cours du parcourt de la formule propositionnelle on construit la valuation progressivement en utilisant une table de hashage. 
+Au cours du parcours de la formule propositionnelle on construit la valuation progressivement en utilisant une table de hashage. 
 \begin{itemize}
 \item A chaque fois que l'on considère une variable qui n'est pas encore dans la table de hashage, on l'ajoute à la table.
 \item On explore dans un premier temps le fils gauche en associant cette variable à faux.
@@ -115,13 +115,13 @@ Suppressions des noeuds inutiles:
 \end{itemize}
 Pour passer au diagramme de décision binaire on souhaite déterminer un identifiant pour chaque noeud.
 \begin{itemize}
-\item On parcout l'arbre, si le noeud est reconnu, on le réutilise, sinon on le crée
+\item On parcourt l'arbre, si le noeud est reconnu, on le réutilise, sinon on le crée
 \item Pour reconnaître le noeud on utilise une table de hashage dont les clefs sont les chaînes de caractères représentant la formule propositionnelle et les valeurs sont les noeuds.
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Identification plus efficace}
-L'identification précédente n'est pas efficace car on ne stocke par sur chaque noeud la chaîne de caractères qu'il représente. Utiliser l'identifiant de chaque noeud permet d'être plus efficace à la fois au niveau de la table de hashage, et au niveau du parcourt de l'arbre.
+L'identification précédente n'est pas efficace car on ne stocke par sur chaque noeud la chaîne de caractères qu'il représente. Utiliser l'identifiant de chaque noeud permet d'être plus efficace à la fois au niveau de la table de hashage, et au niveau du parcours de l'arbre.
 \begin{itemize}
 \item Déterminer la clef de chaque noeud dans la table de hashage en fonction des identifiants des deux fils et de la variable stockée par le noeud
 \item Si la clef existe, on utilise le noeud déjà construit sinon on définit un identifiant qui n'est pas encore utilisé
@@ -143,7 +143,7 @@ Création du diagramme directement à partir de la formule propositionnelle :
 \begin{itemize}
 \item Conversion de l'arbre vers le diagramme : 
 \begin{itemize}
-\item Tetravex $2$x$2$ résolu avec 4 carrés, mais débordement de pile à partir de 4 carrés. Utilisation du style par passage de continuation pour réduire la taille de la pile.
+\item Tetravex $2$x$2$ résolu avec 4 carrés, mais débordement de pile à partir de 5 carrés. Utilisation du style par passage de continuation pour réduire la taille de la pile.
 \end{itemize}
 \item Création de l'arbre à partir de la formule propositionnelle, en utilisant les opérateurs binaires avec mémoïsation
 \begin{itemize}
